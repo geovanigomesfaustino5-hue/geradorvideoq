@@ -27,6 +27,9 @@ jobs:
     - name: Generate Android project structure
       run: flutter create --platforms=android .
 
+    - name: Add http package
+      run: flutter pub add http
+
     - name: Install dependencies
       run: flutter pub get
 
