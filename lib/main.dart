@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:video_player/video_player.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -38,15 +39,17 @@ class _VideoHomeScreenState extends State<VideoHomeScreen> {
     final texto = promptController.text.trim();
     if (texto.isEmpty) return;
 
-    FocusScope.of(context).unfocus(); // Fecha o teclado
+    FocusScope.of(context).unfocus();
 
     setState(() {
       isLoading = true;
       statusMensagem = 'Conectando ao servidor...';
     });
 
-    _videoController?.dispose();
-    _videoController = null;
+    if (_videoController != null) {
+      await _videoController!.dispose();
+      _videoController = null;
+    }
 
     try {
       final response = await http.post(
@@ -61,25 +64,24 @@ class _VideoHomeScreenState extends State<VideoHomeScreen> {
 
         if (url != null && url.isNotEmpty) {
           setState(() {
-            statusMensagem = 'Baixando e preparando vídeo...';
+            statusMensagem = 'Inicializando vídeo...';
           });
-          await _carregarVideoComSuporte(url);
+          await _inicializarPlayer(url);
         } else {
-          _erro('Servidor não retornou o link do vídeo.');
+          _erro('URL de vídeo inválida.');
         }
       } else {
         _erro('Erro no servidor (${response.statusCode}).');
       }
     } catch (e) {
-      _erro('O servidor demorou a responder. Tente novamente.');
+      _erro('Tempo limite esgotado ao conectar no servidor.');
     }
   }
 
-  Future<void> _carregarVideoComSuporte(String url) async {
+  Future<void> _inicializarPlayer(String url) async {
     try {
       final controller = VideoPlayerController.networkUrl(
         Uri.parse(url),
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
       );
 
       await controller.initialize();
@@ -91,7 +93,7 @@ class _VideoHomeScreenState extends State<VideoHomeScreen> {
         isLoading = false;
       });
     } catch (e) {
-      _erro('O formato do vídeo enviado não rodou no celular.');
+      _erro('Erro ao abrir mídia. Verifique a conexão do celular.');
     }
   }
 
@@ -100,7 +102,11 @@ class _VideoHomeScreenState extends State<VideoHomeScreen> {
       isLoading = false;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.redAccent),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.redAccent,
+        duration: const Duration(seconds: 5),
+      ),
     );
   }
 
