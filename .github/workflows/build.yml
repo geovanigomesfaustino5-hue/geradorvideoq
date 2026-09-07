@@ -27,9 +27,10 @@ jobs:
     - name: Generate Android project structure
       run: flutter create --platforms=android .
 
-    - name: Add Internet Permission to AndroidManifest
+    - name: Configure Android Permissions and Network
       run: |
         sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
+        sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
 
     - name: Add required packages
       run: |
