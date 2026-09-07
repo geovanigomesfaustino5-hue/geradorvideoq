@@ -1,8 +1,4 @@
 fastapi
 uvicorn
-google-generativeai
-edge-tts
-moviepy>=2.0.0
-pillow
-requests
 pydantic
+requests
