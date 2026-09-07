@@ -13,96 +13,97 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Criador de Vídeo',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        primaryColor: Colors.deepPurple,
-      ),
-      home: const VideoGeneratorScreen(),
+      title: 'Criador de Vídeo Automático',
+      theme: ThemeData.dark(),
+      home: const VideoHomeScreen(),
     );
   }
 }
 
-class VideoGeneratorScreen extends StatefulWidget {
-  const VideoGeneratorScreen({super.key});
+class VideoHomeScreen extends StatefulWidget {
+  const VideoHomeScreen({super.key});
 
   @override
-  State<VideoGeneratorScreen> createState() => _VideoGeneratorScreenState();
+  State<VideoHomeScreen> createState() => _VideoHomeScreenState();
 }
 
-class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
-  final TextEditingController _controller = TextEditingController();
-  bool _isLoading = false;
-  String? _errorMessage;
+class _VideoHomeScreenState extends State<VideoHomeScreen> {
+  final TextEditingController promptController = TextEditingController();
+  bool isLoading = false;
+  String? videoUrl;
   VideoPlayerController? _videoController;
+  String statusMensagem = '';
 
-  Future<void> _generateVideo() async {
-    final prompt = _controller.text.trim();
-    if (prompt.isEmpty) return;
-
-    FocusScope.of(context).unfocus(); // Fecha o teclado mobile ao clicar
+  Future<void> gerarVideo() async {
+    if (promptController.text.trim().isEmpty) return;
 
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _videoController?.dispose();
-      _videoController = null;
+      isLoading = true;
+      videoUrl = null;
+      statusMensagem = 'Conectando ao servidor...';
     });
 
+    // Descarta o controller antigo se existir
+    _videoController?.dispose();
+    _videoController = null;
+
     try {
-      // 1. Tenta a chamada no backend
-      final response = await http
-          .post(
-            Uri.parse('https://geradorvideoq.onrender.com/gerar-video'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'prompt': prompt}),
-          )
-          .timeout(const Duration(seconds: 12)); // Define tempo limite para não travar a tela
+      // Configurado com 60 segundos para dar tempo do Render inicializar
+      final response = await http.post(
+        Uri.parse('https://geradorvideoq.onrender.com/gerar-video'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'prompt': promptController.text.trim()}),
+      ).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final videoUrl = data['video_url'];
+        final url = data['video_url'];
 
-        if (videoUrl != null && videoUrl.toString().isNotEmpty) {
-          _initializeVideoPlayer(videoUrl);
+        if (url != null && url.isNotEmpty) {
+          _inicializarPlayer(url);
         } else {
-          _useDirectIaFallback(prompt);
+          _mostrarErro('Nenhum vídeo retornado.');
         }
       } else {
-        _useDirectIaFallback(prompt);
+        _mostrarErro('Erro no servidor: ${response.statusCode}');
       }
     } catch (e) {
-      // 2. Se o Render estiver offline ou demorar, chama o motor de IA direto no app
-      _useDirectIaFallback(prompt);
+      _mostrarErro('O servidor demorou para responder. Tente novamente em alguns segundos.');
     }
   }
 
-  void _useDirectIaFallback(String promptText) {
-    final promptEncoded = Uri.encodeComponent(promptText);
-    final directIaUrl = "https://image.pollinations.ai/prompt/$promptEncoded?model=video&nologo=true";
-    _initializeVideoPlayer(directIaUrl);
-  }
+  void _inicializarPlayer(String url) {
+    setState(() {
+      statusMensagem = 'Carregando vídeo...';
+    });
 
-  void _initializeVideoPlayer(String url) {
     _videoController = VideoPlayerController.networkUrl(Uri.parse(url))
       ..initialize().then((_) {
         setState(() {
-          _isLoading = false;
+          videoUrl = url;
+          isLoading = false;
         });
+        _videoController?.setLooping(true);
         _videoController?.play();
       }).catchError((error) {
-        setState(() {
-          _errorMessage = "Erro ao processar o vídeo. Tente novamente com outro texto.";
-          _isLoading = false;
-        });
+        _mostrarErro('Erro ao reproduzir a mídia.');
       });
+  }
+
+  void _mostrarErro(String mensagem) {
+    setState(() {
+      isLoading = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensagem)),
+    );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
     _videoController?.dispose();
+    promptController.dispose();
     super.dispose();
   }
 
@@ -111,13 +112,11 @@ class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Criador de Vídeo Automático'),
-        backgroundColor: Colors.deepPurple,
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
               'O que você deseja criar hoje?',
@@ -125,91 +124,33 @@ class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: _controller,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Ex: Um vídeo curto sobre a exploração espacial...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: const Color(0xFF1E1E1E),
+              controller: promptController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Ex: disco voador, galáxia, tecnologia...',
               ),
+              maxLines: 3,
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _generateVideo,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : gerarVideo,
+                child: isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('GERAR VÍDEO'),
               ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                    )
-                  : const Text('GERAR VÍDEO', style: TextStyle(fontSize: 16)),
             ),
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.redAccent),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-            if (_videoController != null && _videoController!.value.isInitialized) ...[
-              const SizedBox(height: 24),
-              const Text(
-                'Resultado:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              AspectRatio(
-                aspectRatio: _videoController!.value.aspectRatio,
-                child: Container(
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.black,
-                  ),
+            const SizedBox(height: 20),
+            if (isLoading) Text(statusMensagem),
+            if (videoUrl != null && _videoController != null && _videoController!.value.isInitialized)
+              Expanded(
+                child: AspectRatio(
+                  aspectRatio: _videoController!.value.aspectRatio,
                   child: VideoPlayer(_videoController!),
                 ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    iconSize: 40,
-                    icon: Icon(
-                      _videoController!.value.isPlaying
-                          ? Icons.pause_circle_filled
-                          : Icons.play_circle_filled,
-                      color: Colors.deepPurpleAccent,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _videoController!.value.isPlaying
-                            ? _videoController!.pause()
-                            : _videoController!.play();
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),
