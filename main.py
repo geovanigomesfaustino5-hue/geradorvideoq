@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
-import os
 
 app = FastAPI()
 
@@ -25,15 +24,10 @@ def home():
 
 @app.post("/gerar-video")
 def gerar_video(request: PromptRequest):
-    # Lista de vídeos MP4 diretos e testados para alta compatibilidade no celular
-    videos_prontos = [
-        "https://assets.mixkit.co/videos/preview/mixkit-starry-sky-in-the-night-41548-large.mp4",
-        "https://assets.mixkit.co/videos/preview/mixkit-space-spin-with-stars-and-a-galaxy-41549-large.mp4",
-        "https://assets.mixkit.co/videos/preview/mixkit-planets-in-space-41550-large.mp4"
-    ]
+    # Link MP4 direto e compatível com o player do Android
+    video_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
     
-    # Retorna um arquivo MP4 direto com codec compatível com o Android
     return {
         "status": "sucesso",
-        "video_url": videos_prontos[0]
+        "video_url": video_url
     }
