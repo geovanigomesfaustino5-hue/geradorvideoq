@@ -35,53 +35,53 @@ class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
-  String? _currentVideoUrl;
   VideoPlayerController? _videoController;
 
   Future<void> _generateVideo() async {
     final prompt = _controller.text.trim();
     if (prompt.isEmpty) return;
 
+    FocusScope.of(context).unfocus(); // Fecha o teclado mobile ao clicar
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
       _videoController?.dispose();
       _videoController = null;
-      _currentVideoUrl = null;
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('https://geradorvideoq.onrender.com/gerar-video'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'prompt': prompt}),
-      );
+      // 1. Tenta a chamada no backend
+      final response = await http
+          .post(
+            Uri.parse('https://geradorvideoq.onrender.com/gerar-video'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'prompt': prompt}),
+          )
+          .timeout(const Duration(seconds: 12)); // Define tempo limite para não travar a tela
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final videoUrl = data['video_url'];
 
-        if (videoUrl != null) {
-          _currentVideoUrl = videoUrl;
+        if (videoUrl != null && videoUrl.toString().isNotEmpty) {
           _initializeVideoPlayer(videoUrl);
         } else {
-          setState(() {
-            _errorMessage = "Nenhum vídeo retornado pela API.";
-            _isLoading = false;
-          });
+          _useDirectIaFallback(prompt);
         }
       } else {
-        setState(() {
-          _errorMessage = "Erro no servidor: ${response.statusCode}";
-          _isLoading = false;
-        });
+        _useDirectIaFallback(prompt);
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = "Falha ao conectar na API. Tente novamente.";
-        _isLoading = false;
-      });
+      // 2. Se o Render estiver offline ou demorar, chama o motor de IA direto no app
+      _useDirectIaFallback(prompt);
     }
+  }
+
+  void _useDirectIaFallback(String promptText) {
+    final promptEncoded = Uri.encodeComponent(promptText);
+    final directIaUrl = "https://image.pollinations.ai/prompt/$promptEncoded?model=video&nologo=true";
+    _initializeVideoPlayer(directIaUrl);
   }
 
   void _initializeVideoPlayer(String url) {
@@ -93,7 +93,7 @@ class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
         _videoController?.play();
       }).catchError((error) {
         setState(() {
-          _errorMessage = "Erro ao carregar o vídeo no player. Verifique o arquivo final.";
+          _errorMessage = "Erro ao processar o vídeo. Tente novamente com outro texto.";
           _isLoading = false;
         });
       });
@@ -147,7 +147,11 @@ class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
                 ),
               ),
               child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
                   : const Text('GERAR VÍDEO', style: TextStyle(fontSize: 16)),
             ),
             if (_errorMessage != null) ...[
