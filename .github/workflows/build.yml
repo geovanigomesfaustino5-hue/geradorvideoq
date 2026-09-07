@@ -31,8 +31,10 @@ jobs:
       run: |
         sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
 
-    - name: Add http package
-      run: flutter pub add http
+    - name: Add required packages
+      run: |
+        flutter pub add http
+        flutter pub add video_player
 
     - name: Install dependencies
       run: flutter pub get
