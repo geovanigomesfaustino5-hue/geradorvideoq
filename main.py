@@ -26,11 +26,11 @@ def home():
 def gerar_video(request: PromptRequest):
     ideia = request.prompt or request.tema or request.texto or "Sem ideia"
     
-    # URL de um arquivo .mp4 público e direto para reprodução no player
-    video_exemplo = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+    # URL direta de teste em HTTPS válida para players nativos
+    video_direto = "https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4"
     
     return {
         "status": "sucesso",
         "mensagem": f"Vídeo criado para o tema: {ideia}",
-        "video_url": video_exemplo
+        "video_url": video_direto
     }
