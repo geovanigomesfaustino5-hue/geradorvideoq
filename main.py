@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
-import requests
 import urllib.parse
 
 app = FastAPI()
@@ -22,37 +21,29 @@ class PromptRequest(BaseModel):
 
 @app.get("/")
 def home():
-    return {"status": "API rodando com sucesso"}
+    return {"status": "API de Geração de Vídeo por IA rodando com sucesso"}
 
 @app.post("/gerar-video")
 def gerar_video(request: PromptRequest):
-    ideia = request.prompt or request.tema or request.texto or "car"
+    # Pega o texto digitado no app ou define um padrao
+    ideia = request.prompt or request.tema or request.texto or "paisagem futurista"
     
-    # Formata a busca
-    query = urllib.parse.quote(ideia)
-    
-    # Busca um vídeo direto rápido e leve na API do Pexels
-    headers = {
-        "Authorization": "563492ad6f91700001000001c80c98f80cb5494a974bdf739ef51a70"
-    }
+    # Formata o prompt para URL
+    prompt_formatado = urllib.parse.quote(ideia)
     
     try:
-        url = f"https://api.pexels.com/videos/search?query={query}&per_page=1"
-        res = requests.get(url, headers=headers, timeout=5)
-        data = res.json()
+        # Gera o vídeo diretamente via modelo de IA (Pollinations AI Video Model)
+        # Esse endpoint cria/projetar o vídeo com base estritamente no prompt
+        video_url = f"https://image.pollinations.ai/prompt/{prompt_formatado}?model=video&nologo=true"
         
-        if data.get("videos") and len(data["videos"]) > 0:
-            # Pega o arquivo de formato direto MP4
-            files = data["videos"][0]["video_files"]
-            # Filtra por arquivos HD/SD diretos
-            video_url = files[0]["link"]
-        else:
-            video_url = "https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4"
-    except Exception:
-        video_url = "https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4"
-
-    return {
-        "status": "sucesso",
-        "mensagem": f"Vídeo pronto para: {ideia}",
-        "video_url": video_url
-}
+        return {
+            "status": "sucesso",
+            "mensagem": f"Vídeo projetado por IA para: {ideia}",
+            "video_url": video_url
+        }
+    except Exception as e:
+        return {
+            "status": "erro",
+            "mensagem": f"Erro ao projetar vídeo: {str(e)}",
+            "video_url": None
+        }
