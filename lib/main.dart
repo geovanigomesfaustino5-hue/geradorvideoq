@@ -35,6 +35,7 @@ class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  String? _currentVideoUrl;
   VideoPlayerController? _videoController;
 
   Future<void> _generateVideo() async {
@@ -46,6 +47,7 @@ class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
       _errorMessage = null;
       _videoController?.dispose();
       _videoController = null;
+      _currentVideoUrl = null;
     });
 
     try {
@@ -60,6 +62,7 @@ class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
         final videoUrl = data['video_url'];
 
         if (videoUrl != null) {
+          _currentVideoUrl = videoUrl;
           _initializeVideoPlayer(videoUrl);
         } else {
           setState(() {
@@ -90,7 +93,7 @@ class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
         _videoController?.play();
       }).catchError((error) {
         setState(() {
-          _errorMessage = "Erro ao carregar vídeo no player.";
+          _errorMessage = "Erro ao carregar o vídeo no player. Verifique o arquivo final.";
           _isLoading = false;
         });
       });
@@ -165,7 +168,7 @@ class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
             if (_videoController != null && _videoController!.value.isInitialized) ...[
               const SizedBox(height: 24),
               const Text(
-                'Vídeo Gerado:',
+                'Resultado:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
@@ -185,7 +188,7 @@ class _VideoGeneratorScreenState extends State<VideoGeneratorScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    iconSize: 36,
+                    iconSize: 40,
                     icon: Icon(
                       _videoController!.value.isPlaying
                           ? Icons.pause_circle_filled
