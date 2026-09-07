@@ -24,8 +24,8 @@ def home():
 
 @app.post("/gerar-video")
 def gerar_video(request: PromptRequest):
-    # Link MP4 direto e compatível com o player do Android
-    video_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+    # Link direto HTTPS com certificado SSL válido para o player do Android aceitar
+    video_url = "https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4"
     
     return {
         "status": "sucesso",
