@@ -5,7 +5,6 @@ from typing import Optional
 
 app = FastAPI()
 
-# Libera o acesso de qualquer origem
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,7 +13,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Aceita tanto 'prompt' quanto 'tema' ou 'texto' para evitar o erro 422
 class PromptRequest(BaseModel):
     prompt: Optional[str] = None
     tema: Optional[str] = None
@@ -26,12 +24,13 @@ def home():
 
 @app.post("/gerar-video")
 def gerar_video(request: PromptRequest):
-    # Pega o texto enviado independente do nome do campo
     ideia = request.prompt or request.tema or request.texto or "Sem ideia"
     
-    # Retorna o link do vídeo
+    # URL de um arquivo .mp4 público e direto para reprodução no player
+    video_exemplo = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+    
     return {
         "status": "sucesso",
         "mensagem": f"Vídeo criado para o tema: {ideia}",
-        "video_url": "https://geradorvideoq.onrender.com/static/video.mp4"
+        "video_url": video_exemplo
     }
