@@ -1,4 +1,7 @@
-fastapi
-uvicorn
-pydantic
-requests
+torch
+diffusers
+transformers
+accelerate
+imageio[ffmpeg]
+moviepy
+gradio
